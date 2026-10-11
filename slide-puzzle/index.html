@@ -66,10 +66,15 @@
 </main>
 
 <section id="game" class="game" hidden>
-  <div class="hud">
+  <div class="hud" id="hud">
     <button type="button" id="giveUp" class="btn small">諦める</button>
     <div class="stat" id="statTime"><span class="k">時間</span><span id="timer" class="v">00:00.0</span></div>
     <div class="stat" id="statMoves"><span class="k">手数</span><span id="moves" class="v">0</span></div>
+  </div>
+  <div id="doneTop" class="doneTop" hidden>
+    <span id="dLabel" class="k">ポイント</span>
+    <span id="dPoints" class="pv">0</span>
+    <span id="dSub" class="sub"></span>
   </div>
   <div id="stage" class="stage">
     <canvas id="board" aria-label="パズル盤面" tabindex="0"></canvas>
@@ -80,6 +85,10 @@
     <input id="zoomRange" type="range" min="0" max="1000" value="0" aria-label="縮尺">
     <button type="button" id="zoomIn" class="btn icon" aria-label="拡大">+</button>
     <span id="zoomPct" class="pct">100%</span>
+  </div>
+  <div id="doneBar" class="doneBar" hidden>
+    <button type="button" id="doneStart" class="btn">開始画面に戻る</button>
+    <button type="button" id="doneAgain" class="btn primary">もう一度する</button>
   </div>
 </section>
 
@@ -102,6 +111,7 @@
 
 <div id="clearModal" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="clearTitle">
   <div class="sheet clear">
+    <button type="button" id="clearClose" class="btn icon close" aria-label="結果を閉じて盤面を見る">✕</button>
     <p id="clearSize" class="eyebrow">4 × 4</p>
     <h2 id="clearTitle">完成！</h2>
     <div class="bar" aria-hidden="true"></div>
@@ -116,10 +126,21 @@
       <span id="rBest" class="best"></span>
     </div>
     <p id="rFormula" class="formula"></p>
+    <button type="button" id="shareBtn" class="btn share">共有する</button>
     <div class="actions">
       <button type="button" id="toStart" class="btn">開始画面に戻る</button>
       <button type="button" id="again" class="btn primary">もう一度する</button>
     </div>
+  </div>
+</div>
+
+<div id="shareModal" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="shareTitle">
+  <div class="sheet">
+    <button type="button" id="shareX" class="btn icon close" aria-label="閉じる">✕</button>
+    <h2 id="shareTitle">戦績の画像</h2>
+    <p class="note">この画面では直接保存できないため、画像を長押し（パソコンでは右クリック）して保存してください。</p>
+    <img id="shareImg" alt="ポイント・完成図・時間・手数をまとめた戦績の画像">
+    <div class="actions"><button type="button" id="shareClose" class="btn">閉じる</button></div>
   </div>
 </div>
 
