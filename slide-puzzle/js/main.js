@@ -370,24 +370,26 @@
     const a = new Int32Array(N2);
     let wrong = 0;
     do {
-      for (let i = 0; i < N2; i++) a[i] = i;
-      for (let i = N2 - 1; i > 0; i--) {
+      // The hole starts at its own spot (bottom-right, or the random spot);
+      // only the other tiles are shuffled around it.
+      const vals = new Int32Array(N2 - 1);
+      for (let i = 0, k = 0; i < N2; i++) if (i !== holeId) vals[k++] = i;
+      for (let i = vals.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
-        const t = a[i]; a[i] = a[j]; a[j] = t;
+        const t = vals[i]; vals[i] = vals[j]; vals[j] = t;
       }
-      // permutation parity via cycle count
+      for (let i = 0, k = 0; i < N2; i++) a[i] = i === holeId ? holeId : vals[k++];
+      // permutation parity via cycle count; with the hole in place it must be even
       const seen = new Uint8Array(N2);
-      let cycles = 0, holePos = 0;
+      let cycles = 0;
       for (let i = 0; i < N2; i++) {
-        if (a[i] === holeId) holePos = i;
         if (seen[i]) continue;
         cycles++;
         let j = i;
         while (!seen[j]) { seen[j] = 1; j = a[j]; }
       }
       const permParity = (N2 - cycles) & 1;
-      const dist = Math.abs(Math.floor(holePos / n) - Math.floor(holeId / n)) + Math.abs((holePos % n) - (holeId % n));
-      if (permParity !== (dist & 1)) {
+      if (permParity !== 0) {
         // swap two non-hole tiles to make it solvable
         let p1 = -1, p2 = -1;
         for (let i = 0; i < N2 && p2 < 0; i++) {
@@ -772,6 +774,19 @@
     return c;
   }
 
+  function isMobileDevice() {
+    if (navigator.userAgentData && typeof navigator.userAgentData.mobile === 'boolean' && navigator.userAgentData.mobile) return true;
+    const ua = navigator.userAgent || '';
+    if (/Android|iPhone|iPad|iPod|Mobile/i.test(ua)) return true;
+    return /Macintosh/.test(ua) && navigator.maxTouchPoints > 1; // iPadOS
+  }
+  let dlCap = null;
+  try {
+    if (window.claude && typeof window.claude.use === 'function') {
+      window.claude.use('downloads').then(d => { dlCap = d; }).catch(() => {});
+    }
+  } catch (e) {}
+
   function showShareFallback(blob) {
     const img = $('shareImg');
     if (img.dataset.url) URL.revokeObjectURL(img.dataset.url);
@@ -804,15 +819,28 @@
     if (r.scoring) parts.push(`ポイント ${r.points.toLocaleString('ja-JP')}`);
     if (r.showTimer) parts.push(`時間 ${fmt(r.time)}`);
     if (r.showMoves) parts.push(`手数 ${r.moves.toLocaleString('ja-JP')}`);
-    let file = null;
-    try { file = new File([blob], name, { type: 'image/png' }); } catch (e) {}
-    if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
-      try { await navigator.share({ files: [file], text: parts.join(' / ') }); return; }
-      catch (e) { if (e && e.name === 'AbortError') return; }
-    }
     let topLevel = false;
     try { topLevel = window.self === window.top; } catch (e) {}
-    if (topLevel) {
+    // Inside the Claude viewer: use its save dialog.
+    if (!topLevel) {
+      if (dlCap) {
+        try { await dlCap.save({ filename: name, data: blob }); return; }
+        catch (e) { if (e && (e.code === 'declined' || e.code === 'rate_limited')) return; }
+      }
+      showShareFallback(blob);
+      return;
+    }
+    // Phones and tablets: open the share sheet (save to photos, LINE, SNS…).
+    if (isMobileDevice()) {
+      let file = null;
+      try { file = new File([blob], name, { type: 'image/png' }); } catch (e) {}
+      if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+        try { await navigator.share({ files: [file], text: parts.join(' / ') }); return; }
+        catch (e) { if (e && e.name === 'AbortError') return; }
+      }
+    }
+    // Computers (and phones without a share sheet): download the PNG.
+    {
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
       a.download = name;
@@ -820,8 +848,6 @@
       a.click();
       a.remove();
       setTimeout(() => URL.revokeObjectURL(a.href), 5000);
-    } else {
-      showShareFallback(blob);
     }
   }
   $('shareBtn').addEventListener('click', () => shareResult($('shareBtn')));
