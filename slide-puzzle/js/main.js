@@ -464,6 +464,7 @@
       cam.cell = cam.fit;
     }
     clampCam();
+    $('hint').classList.toggle('off', cam.oy < 44);
     updateZoomUI();
     draw();
   }
