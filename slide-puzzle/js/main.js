@@ -785,10 +785,9 @@
   $('shareX').addEventListener('click', closeShare);
   $('shareClose').addEventListener('click', closeShare);
 
-  $('shareBtn').addEventListener('click', async () => {
+  async function shareResult(btn) {
     const r = game.result;
     if (!r) return;
-    const btn = $('shareBtn');
     let blob = game.shareBlob;
     if (!blob) {
       btn.disabled = true; btn.textContent = '画像を作成中…';
@@ -824,7 +823,9 @@
     } else {
       showShareFallback(blob);
     }
-  });
+  }
+  $('shareBtn').addEventListener('click', () => shareResult($('shareBtn')));
+  $('doneShare').addEventListener('click', () => shareResult($('doneShare')));
 
   $('giveUp').addEventListener('click', () => {
     stopTimer();
