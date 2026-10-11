@@ -419,6 +419,8 @@
     pixel = null; avg = null;
     $('timer').textContent = fmt(0);
     $('moves').textContent = '0';
+    setResultView(false);
+    game.result = null; game.shareBlob = null;
     $('hint').hidden = !settings.showTimer;
     $('statTime').hidden = !settings.showTimer;
     $('statMoves').hidden = !settings.showMoves;
@@ -438,7 +440,7 @@
     $('start').hidden = which !== 'start';
     $('game').hidden = which !== 'game';
     document.body.classList.toggle('playing', which === 'game');
-    if (which === 'start') window.scrollTo(0, 0);
+    if (which === 'start') { setResultView(false); window.scrollTo(0, 0); }
   }
 
   function layout(keep) {
@@ -627,8 +629,10 @@
     $('pointsBlock').hidden = !game.scoring;
     $('rFormula').hidden = !game.scoring;
     $('noPoints').hidden = game.scoring;
-    if (!game.scoring) { $('clearModal').hidden = false; $('again').focus(); return; }
+    game.result = { n, time: game.elapsed, moves: game.moves, scoring: game.scoring, showTimer: settings.showTimer, showMoves: settings.showMoves, points: 0 };
+    if (!game.scoring) { finishResult(); return; }
     const sc = score(n, game.moves, game.elapsed);
+    game.result.points = sc.points;
     $('rPoints').textContent = sc.points.toLocaleString('ja-JP');
     $('rFormula').textContent = `基礎点 ${sc.base.toLocaleString('ja-JP')}（盤の大きさ）×（手数評価 ${sc.mf.toFixed(2)} ＋ 時間評価 ${sc.tf.toFixed(2)}）÷ 2`;
     const key = 'slide-best-' + n;
@@ -642,9 +646,185 @@
       best.textContent = `この幅の自己ベスト ${prev.toLocaleString('ja-JP')}`;
       best.className = 'best';
     }
+    finishResult();
+  }
+
+  function finishResult() {
+    const r = game.result;
+    $('dLabel').textContent = r.scoring ? 'ポイント' : '完成';
+    $('dPoints').textContent = r.scoring ? r.points.toLocaleString('ja-JP') : '完成！';
+    $('dLabel').hidden = !r.scoring;
+    const sub = [];
+    if (r.showTimer) sub.push('時間 ' + fmt(r.time));
+    if (r.showMoves) sub.push('手数 ' + r.moves.toLocaleString('ja-JP'));
+    $('dSub').textContent = sub.join(' ・ ');
+    $('dSub').hidden = !sub.length;
     $('clearModal').hidden = false;
     $('again').focus();
+    game.shareBlob = null;
+    buildShareImage().then(c => new Promise(res => c.toBlob(res, 'image/png'))).then(b => { if (game.result === r) game.shareBlob = b; }).catch(() => {});
   }
+
+  // Result view: shown after closing the clear dialog with ✕.
+  function setResultView(on) {
+    $('hud').hidden = on;
+    $('doneTop').hidden = !on;
+    $('doneBar').hidden = !on;
+    if (on) $('hint').hidden = true;
+  }
+  $('clearClose').addEventListener('click', () => {
+    $('clearModal').hidden = true;
+    setResultView(true);
+    $('doneAgain').focus();
+  });
+  $('doneStart').addEventListener('click', () => showScreen('start'));
+  $('doneAgain').addEventListener('click', () => startGame());
+
+  /* ---------- share image ---------- */
+  function drawSolved(x, bx, by, B) {
+    const n = game.n, s = B / n;
+    if (s >= 2.5 && n <= 400) {
+      for (let t = 0, N2 = n * n; t < N2; t++) {
+        drawTile(x, t, bx + (t % n) * s, by + Math.floor(t / n) * s, s, n, game.img, game.showNum);
+      }
+    } else if (game.img) {
+      x.imageSmoothingQuality = 'high';
+      x.drawImage(game.img, bx, by, B, B);
+    } else {
+      const k = Math.min(n, 512), c = document.createElement('canvas');
+      c.width = c.height = k;
+      const cx = c.getContext('2d');
+      for (let t = 0; t < k * k; t++) {
+        const [h, sa, l] = rainbowHSL(t, k);
+        cx.fillStyle = `hsl(${h} ${sa}% ${l}%)`;
+        cx.fillRect(t % k, Math.floor(t / k), 1, 1);
+      }
+      x.imageSmoothingEnabled = true;
+      x.drawImage(c, bx, by, B, B);
+    }
+  }
+  function fitFont(x, text, weight, size, family, maxW) {
+    x.font = `${weight} ${size}px ${family}`;
+    const w = x.measureText(text).width;
+    if (w > maxW) x.font = `${weight} ${Math.floor(size * maxW / w)}px ${family}`;
+  }
+  async function buildShareImage() {
+    try {
+      await Promise.all([
+        document.fonts.load('400 112px "Dela Gothic One"'),
+        document.fonts.load('700 64px "Chivo Mono"'),
+        document.fonts.load('700 30px "Zen Kaku Gothic New"')
+      ]);
+    } catch (e) {}
+    const r = game.result, n = r.n;
+    const W = 1080, H = 1350;
+    const c = document.createElement('canvas');
+    c.width = W; c.height = H;
+    const x = c.getContext('2d');
+    const C = { bg: '#EDEFF4', ink: '#181B24', muted: '#5A6172', accent: '#3239C8', tray: '#D3D9E5' };
+    const DISPLAY = '"Dela Gothic One", "Hiragino Sans", sans-serif';
+    const BODY = '"Zen Kaku Gothic New", "Hiragino Sans", sans-serif';
+    const MONO = '"Chivo Mono", ui-monospace, Menlo, monospace';
+    x.fillStyle = C.bg; x.fillRect(0, 0, W, H);
+    const g = x.createLinearGradient(0, 0, W, 0);
+    [0, 40, 70, 130, 190, 235, 300].forEach((h, i) => g.addColorStop(i / 6, `hsl(${h} 82% 56%)`));
+    x.fillStyle = g; x.fillRect(0, 0, W, 16);
+    x.textAlign = 'center'; x.textBaseline = 'alphabetic';
+
+    x.fillStyle = C.muted;
+    x.font = `700 30px ${BODY}`;
+    x.fillText(`虹のスライドパズル ・ ${n.toLocaleString('ja-JP')} × ${n.toLocaleString('ja-JP')}`, W / 2, 82);
+    if (r.scoring) {
+      x.font = `700 28px ${BODY}`;
+      x.fillText('ポイント', W / 2, 142);
+      x.fillStyle = C.accent;
+      fitFont(x, r.points.toLocaleString('ja-JP'), 400, 112, DISPLAY, W - 120);
+      x.fillText(r.points.toLocaleString('ja-JP'), W / 2, 252);
+    } else {
+      x.fillStyle = C.ink;
+      x.font = `400 100px ${DISPLAY}`;
+      x.fillText('完成！', W / 2, 240);
+    }
+
+    const B = 760, bx = (W - B) / 2, by = 300, pad = 14;
+    x.fillStyle = C.tray;
+    x.beginPath();
+    if (x.roundRect) x.roundRect(bx - pad, by - pad, B + pad * 2, B + pad * 2, 28); else x.rect(bx - pad, by - pad, B + pad * 2, B + pad * 2);
+    x.fill();
+    drawSolved(x, bx, by, B);
+
+    const stats = [];
+    if (r.showTimer) stats.push(['かかった時間', fmt(r.time)]);
+    if (r.showMoves) stats.push(['手数', r.moves.toLocaleString('ja-JP')]);
+    stats.forEach(([k, v], i) => {
+      const cx = W * (i + 0.5) / stats.length;
+      x.textAlign = 'center';
+      x.fillStyle = C.muted;
+      x.font = `700 28px ${BODY}`;
+      x.fillText(k, cx, 1160);
+      x.fillStyle = C.ink;
+      fitFont(x, v, 700, 66, MONO, W / stats.length - 60);
+      x.fillText(v, cx, 1240);
+    });
+    x.fillStyle = C.muted;
+    x.font = `400 24px ${BODY}`;
+    x.fillText(new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' }), W / 2, 1310);
+    return c;
+  }
+
+  function showShareFallback(blob) {
+    const img = $('shareImg');
+    if (img.dataset.url) URL.revokeObjectURL(img.dataset.url);
+    const url = URL.createObjectURL(blob);
+    img.dataset.url = url;
+    img.src = url;
+    $('shareModal').hidden = false;
+    $('shareClose').focus();
+  }
+  function closeShare() { $('shareModal').hidden = true; }
+  $('shareX').addEventListener('click', closeShare);
+  $('shareClose').addEventListener('click', closeShare);
+
+  $('shareBtn').addEventListener('click', async () => {
+    const r = game.result;
+    if (!r) return;
+    const btn = $('shareBtn');
+    let blob = game.shareBlob;
+    if (!blob) {
+      btn.disabled = true; btn.textContent = '画像を作成中…';
+      try {
+        const c = await buildShareImage();
+        blob = await new Promise(res => c.toBlob(res, 'image/png'));
+      } catch (e) { blob = null; }
+      btn.disabled = false; btn.textContent = '共有する';
+      if (!blob) return;
+      game.shareBlob = blob;
+    }
+    const name = `slide-puzzle-${r.n}x${r.n}${r.scoring ? '-' + r.points : ''}.png`;
+    const parts = [`虹のスライドパズル ${r.n}×${r.n} をクリア！`];
+    if (r.scoring) parts.push(`ポイント ${r.points.toLocaleString('ja-JP')}`);
+    if (r.showTimer) parts.push(`時間 ${fmt(r.time)}`);
+    if (r.showMoves) parts.push(`手数 ${r.moves.toLocaleString('ja-JP')}`);
+    let file = null;
+    try { file = new File([blob], name, { type: 'image/png' }); } catch (e) {}
+    if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+      try { await navigator.share({ files: [file], text: parts.join(' / ') }); return; }
+      catch (e) { if (e && e.name === 'AbortError') return; }
+    }
+    let topLevel = false;
+    try { topLevel = window.self === window.top; } catch (e) {}
+    if (topLevel) {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = name;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    } else {
+      showShareFallback(blob);
+    }
+  });
 
   $('giveUp').addEventListener('click', () => {
     stopTimer();
