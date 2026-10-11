@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="幅を自由に決められ、虹のグラデーションや好きな画像で遊べるスライドパズル。">
+<title>虹のスライドパズル</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chivo+Mono:wght@500;700&family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<main id="start" class="start">
+  <header class="brand">
+    <h1>虹のスライドパズル</h1>
+    <div class="spectrum" aria-hidden="true"></div>
+    <p class="lede">マスをタップして空きマスへ滑らせ、元の並びに戻すパズルです。盤の幅や絵柄を決めて始めましょう。</p>
+  </header>
+
+  <div class="startBody">
+    <form id="setup" class="setup" novalidate>
+      <div class="field">
+        <label for="sizeInput" class="label">幅（マス数）</label>
+        <div class="stepper">
+          <button type="button" id="sizeDec" class="btn icon" aria-label="幅を1減らす">−</button>
+          <input id="sizeInput" type="number" inputmode="numeric" min="2" step="1" value="4" aria-describedby="sizeNote">
+          <button type="button" id="sizeInc" class="btn icon" aria-label="幅を1増やす">+</button>
+        </div>
+        <p id="sizeNote" class="note">4 × 4（動かすマスは15枚）</p>
+      </div>
+
+      <label class="switch" for="optNum">
+        <input type="checkbox" id="optNum" checked>
+        <span class="track" aria-hidden="true"></span>
+        <span>数字を表示する</span>
+      </label>
+      <label class="switch" for="optHole">
+        <input type="checkbox" id="optHole">
+        <span class="track" aria-hidden="true"></span>
+        <span>穴の位置をランダムにする</span>
+      </label>
+
+      <div class="field">
+        <span class="label">ゲーム中に表示するもの</span>
+        <div class="checkRow">
+          <label class="check" for="optTimer"><input type="checkbox" id="optTimer" checked><span>タイマー</span></label>
+          <label class="check" for="optMoves"><input type="checkbox" id="optMoves" checked><span>手数</span></label>
+        </div>
+        <p id="scoreWarn" class="warnSmall" hidden>ポイントが算出できなくなります</p>
+      </div>
+
+      <div class="field">
+        <span class="label">絵柄</span>
+        <div class="imgRow">
+          <button type="button" id="importBtn" class="btn">画像をインポート</button>
+          <button type="button" id="clearImg" class="btn icon" aria-label="画像を消す" disabled>✕</button>
+        </div>
+        <p id="imgNote" class="note imgName">虹のグラデーション（標準）</p>
+        <button type="button" id="recropBtn" class="link" hidden>切り抜く範囲を調整する</button>
+      </div>
+
+      <button type="submit" class="btn primary big">開始</button>
+    </form>
+  </div>
+</main>
+
+<section id="game" class="game" hidden>
+  <div class="hud">
+    <button type="button" id="giveUp" class="btn small">諦める</button>
+    <div class="stat" id="statTime"><span class="k">時間</span><span id="timer" class="v">00:00.0</span></div>
+    <div class="stat" id="statMoves"><span class="k">手数</span><span id="moves" class="v">0</span></div>
+  </div>
+  <div id="stage" class="stage">
+    <canvas id="board" aria-label="パズル盤面" tabindex="0"></canvas>
+    <p id="hint" class="hint">最初にマスを動かすとタイマーが始まります</p>
+  </div>
+  <div id="zoomBar" class="zoomBar" hidden>
+    <button type="button" id="zoomOut" class="btn icon" aria-label="縮小">−</button>
+    <input id="zoomRange" type="range" min="0" max="1000" value="0" aria-label="縮尺">
+    <button type="button" id="zoomIn" class="btn icon" aria-label="拡大">+</button>
+    <span id="zoomPct" class="pct">100%</span>
+  </div>
+</section>
+
+<div id="cropModal" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="cropTitle">
+  <div class="sheet">
+    <h2 id="cropTitle">切り抜く範囲を選ぶ</h2>
+    <p class="note">枠の中がパズルになります。ドラッグで位置を、スライダーや2本指・ホイールで大きさを調整できます。</p>
+    <div id="cropBox" class="cropBox"><canvas id="cropCanvas"></canvas></div>
+    <div class="cropZoomRow">
+      <span>小</span>
+      <input id="cropZoom" type="range" min="0" max="1000" value="0" aria-label="切り抜きの拡大率">
+      <span>大</span>
+    </div>
+    <div class="actions">
+      <button type="button" id="cropCancel" class="btn">取り消す</button>
+      <button type="button" id="cropOk" class="btn primary">この範囲で決定</button>
+    </div>
+  </div>
+</div>
+
+<div id="clearModal" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="clearTitle">
+  <div class="sheet clear">
+    <p id="clearSize" class="eyebrow">4 × 4</p>
+    <h2 id="clearTitle">完成！</h2>
+    <div class="bar" aria-hidden="true"></div>
+    <dl class="results" id="results">
+      <div id="resTime"><dt>かかった時間</dt><dd id="rTime">00:00.0</dd></div>
+      <div id="resMoves"><dt>手数</dt><dd id="rMoves">0</dd></div>
+    </dl>
+    <p id="noPoints" class="note" hidden>タイマーか手数の表示がオフのため、ポイントは算出していません。</p>
+    <div class="points" id="pointsBlock">
+      <span class="k">ポイント</span>
+      <span id="rPoints" class="pv">0</span>
+      <span id="rBest" class="best"></span>
+    </div>
+    <p id="rFormula" class="formula"></p>
+    <div class="actions">
+      <button type="button" id="toStart" class="btn">開始画面に戻る</button>
+      <button type="button" id="again" class="btn primary">もう一度する</button>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="fileInput" accept="image/*" hidden>
+
+<script src="js/main.js"></script>
+</body>
+</html>
