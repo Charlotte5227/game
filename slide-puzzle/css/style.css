@@ -123,13 +123,14 @@ button, input { font: inherit; color: inherit; }
 .stage {
   flex: 1; min-height: 0; position: relative; border-radius: 16px; overflow: hidden; background: var(--stage);
 }
-#board { position: absolute; inset: 0; display: block; touch-action: none; cursor: pointer; }
+#board { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: pointer; }
 .hint {
   position: absolute; left: 50%; top: 10px; transform: translateX(-50%); margin: 0;
   background: var(--surface); color: var(--muted); border: 1px solid var(--line);
   padding: 4px 12px; border-radius: 999px; font-size: .8rem; white-space: nowrap; pointer-events: none;
   max-width: calc(100% - 20px); overflow: hidden; text-overflow: ellipsis;
 }
+.hint.off { display: none; }
 .zoomBar { display: flex; align-items: center; gap: 10px; }
 .zoomBar input[type="range"] { flex: 1; min-width: 0; accent-color: var(--accent); height: 32px; }
 .pct { font-family: var(--f-mono); font-size: .85rem; color: var(--muted); min-width: 4.2em; text-align: right; font-variant-numeric: tabular-nums; }
