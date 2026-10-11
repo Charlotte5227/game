@@ -145,7 +145,17 @@ button, input { font: inherit; color: inherit; }
 .sheet {
   background: var(--surface); border-radius: 20px; padding: 22px; width: min(100%, 440px);
   display: grid; gap: 14px; box-shadow: 0 20px 60px rgba(0,0,0,.3); margin: auto;
+  position: relative;
 }
+.close { position: absolute; top: 12px; right: 12px; width: 2.4em; height: 2.4em; }
+.btn.share { width: 100%; }
+#shareImg { width: 100%; height: auto; border-radius: 12px; display: block; }
+.doneTop { display: grid; justify-items: center; line-height: 1.15; padding-block: 18px 6px; text-align: center; }
+.doneTop .k { font-size: .72rem; letter-spacing: .14em; color: var(--muted); font-weight: 700; }
+.doneTop .pv { font-family: var(--f-display); font-size: clamp(2.2rem, 10vw, 3rem); color: var(--accent); font-variant-numeric: tabular-nums; }
+.doneTop .sub { font-family: var(--f-mono); font-size: .85rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.doneBar { display: flex; gap: 10px; }
+.doneBar .btn { flex: 1; padding-block: .8em; }
 .sheet h2 { margin: 0; font-family: var(--f-display); font-weight: 400; font-size: 1.5rem; line-height: 1.25; text-wrap: balance; }
 .cropBox { width: 100%; aspect-ratio: 1; max-width: 100%; border-radius: 12px; overflow: hidden; background: var(--stage); position: relative; }
 #cropCanvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
@@ -158,6 +168,7 @@ button, input { font: inherit; color: inherit; }
 .clear { text-align: center; }
 .clear .eyebrow { margin: 0; font-family: var(--f-mono); color: var(--muted); font-size: .85rem; letter-spacing: .1em; }
 .clear h2 { font-size: 2.2rem; }
+.clear .eyebrow { padding-inline: 3em; }
 .clear .bar { height: 8px; border-radius: 4px; background: var(--spectrum); width: 60%; margin: -4px auto 0; }
 .results { display: flex; gap: 10px; margin: 0; }
 .results div { flex: 1; min-width: 0; background: var(--bg); border-radius: 12px; padding: 10px; display: grid; gap: 2px; }
